@@ -8,6 +8,8 @@ int main(void) {
     int p1[2], p2[2];
     char linea[64];
     float v;
+    char buf[64];
+    int n;
 
     pipe(p1);
     pipe(p2);
@@ -24,11 +26,11 @@ int main(void) {
 
     if (fork() == 0) { /* lee desde p1, escribe en p2; filtro */
         close(p1[1]); close(p2[0]);
-        FILE *in = fdopen(p1[0], "r");
-        while (fgets(linea, sizeof linea, in)) {
+        while (n = read(p1[0], linea, sizeof linea - 1) > 0) {
             sscanf(linea, "TEMP %f\n", &v);
             if (v >= 20 && v <= 200) {
-                dprintf(p2[1], "TEMP_OK %.2f\n", v);
+                snprintf(buf, sizeof buf, "TEMP_OK %.2f\n", v);
+                write(p1[1], buf, sizeof(buf));
             } else {
                 printf("[FILTRO] Descartado: %.2f\n", v);
             }
@@ -39,8 +41,7 @@ int main(void) {
 
     if (fork() == 0) { /* lee desde p2; imprime valores validos */
         close(p1[0]); close(p1[1]); close(p2[1]);
-        FILE *in = fdopen(p2[0], "r");
-        while (fgets(linea, sizeof linea, in)) {
+        while (n = read(p2[0], linea, sizeof linea - 1)) {
             sscanf(linea, "TEMP_OK %f\n", &v);
             printf("[PUENTE] Temperatura operacional:%.2f\n", v);
         }

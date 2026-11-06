@@ -9,7 +9,8 @@ char *get_estado(int sock, char *id_nave) {
     char msg[128];
     int n;
 
-    dprintf(sock, "CALL get_estado %s\n", id_nave);
+    snprintf(msg, sizeof msg, "CALL get_estado %s\n", id_nave);
+    send(sock, msg, strlen(msg), 0);
     n = recv(sock, msg, sizeof msg - 1, 0);
     msg[n] = '\0';
     sscanf(msg, "RESULT %63s", estado);

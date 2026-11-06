@@ -9,7 +9,8 @@ int main(void) {
     const char *ids[5] = {"Rocinante", "Cantersbury", "Donnager", "Behemoth", "Nauvoo"};
     const char *estados[5] = {"EN_VUELO", "DESTRUIDA", "EN_PUERTO", "EN_VUELO", "CONSTRUCCION"};
     struct sockaddr_in addr = {0};
-    char linea[128], id[32];
+    char buf[128], msg[128], id[32];
+    int n;
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -21,21 +22,24 @@ int main(void) {
     listen(srv, 1);
 
     int cli = accept(srv, NULL, NULL);
-    FILE *in = fdopen(cli, "r");
 
-    while (fgets(linea, sizeof(linea), in)) {
+    while ((n = recv(cli, buf, sizeof buf - 1, 0)) > 0) {
         const char *estado = "DESCONOCIDA";
+        buf[n] = '\0';
         id[0] = '\0';
 
-        if (sscanf(linea, "CALL get_estado %31s", id) == 1) /* sscanf lee la linea, y si la linea coincide (si tiene el mismo formato), escribe a id*/
+        if (sscanf(buf, "CALL get_estado %31s", id) == 1)
             for (int i = 0; i < 5; i++)
-                if (strcmp(id, ids[i]) == 0) /* si la id coincide, entonces se entrega el estado */
+                if (strcmp(id, ids[i]) == 0)
                     estado = estados[i];
+
         printf("[SERVIDOR] get_estado(%s) -> %s\n", id, estado);
-        dprintf(cli, "RESULT %s\n", estado);
+
+        snprintf(msg, sizeof msg, "RESULT %s\n", estado);
+        send(cli, msg, strlen(msg), 0);
     }
 
-    fclose(in);
+    close(cli);
     close(srv);
     return 0;
 }
